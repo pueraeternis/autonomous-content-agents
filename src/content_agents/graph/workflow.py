@@ -2,6 +2,7 @@ from langgraph.graph import END, StateGraph
 
 from src.content_agents.agents.collector import collector_node
 from src.content_agents.agents.critic import critic_node
+from src.content_agents.agents.publisher import publisher_node
 from src.content_agents.agents.writer import writer_node
 from src.content_agents.core.logger import logger
 from src.content_agents.graph.state import AgentState
@@ -23,8 +24,8 @@ def should_publish(state: AgentState) -> str:
     last_critique = critique_history[-1]
 
     if last_critique.is_approved:
-        logger.info("Draft approved! Ready to publish.")
-        return "publisher"  # Placeholder (or END)
+        logger.info("Draft approved! Sending to publisher.")
+        return "publisher"
 
     if iteration < MAX_ITERATIONS:
         logger.info("Draft rejected. Retrying...", iteration=iteration + 1)
@@ -34,10 +35,6 @@ def should_publish(state: AgentState) -> str:
     return "end"
 
 
-def increment_iteration(state: AgentState) -> dict:
-    return {"iteration_count": state["iteration_count"] + 1}
-
-
 # --- Build the Graph ---
 workflow = StateGraph(AgentState)
 
@@ -45,12 +42,12 @@ workflow = StateGraph(AgentState)
 workflow.add_node("collector", collector_node)
 workflow.add_node("writer", writer_node)
 workflow.add_node("critic", critic_node)
-# workflow.add_node("publisher", publisher_node)  # To be added later
+workflow.add_node("publisher", publisher_node)
 
 # Entry point
 workflow.set_entry_point("collector")
 
-# Linear flow: Collector -> Writer -> Critic
+# Linear flow
 workflow.add_edge("collector", "writer")
 workflow.add_edge("writer", "critic")
 
@@ -59,10 +56,14 @@ workflow.add_conditional_edges(
     "critic",
     should_publish,
     {
-        "writer": "writer",  # Retry
-        "publisher": END,  # Success
-        "end": END,  # Failure
+        "writer": "writer",
+        "publisher": "publisher",
+        "end": END,
+        "critic": "critic",
     },
 )
+
+# Edge after Publisher -> End
+workflow.add_edge("publisher", END)
 
 app = workflow.compile()

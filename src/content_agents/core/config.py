@@ -13,10 +13,10 @@ class Settings(BaseSettings):
     environment: str = "development"
 
     # --- Twitter/X Credentials ---
-    twitter_api_key: SecretStr | None = None
-    twitter_api_secret: SecretStr | None = None
-    twitter_access_token: SecretStr | None = None
-    twitter_access_secret: SecretStr | None = None
+    twitter_api_key: SecretStr | None = Field(default=None, alias="API_KEY")
+    twitter_api_secret: SecretStr | None = Field(default=None, alias="API_KEY_SECRET")
+    twitter_access_token: SecretStr | None = Field(default=None, alias="ACCESS_TOKEN")
+    twitter_access_secret: SecretStr | None = Field(default=None, alias="ACCESS_TOKEN_SECRET")
 
     model_config = SettingsConfigDict(
         env_file=".env",
