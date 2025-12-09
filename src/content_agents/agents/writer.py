@@ -29,6 +29,12 @@ You MUST return a JSON object matching the following schema:
 def writer_node(state: AgentState) -> dict:
     logger.info("Writer Agent starting...", topic=state["topic"])
 
+    current_iter = state.get("iteration_count", 0)
+    new_iter = current_iter
+
+    if state.get("critique_history"):
+        new_iter += 1
+
     articles = state["articles"]
     if not articles:
         logger.warning("No articles to write about.")
@@ -57,6 +63,34 @@ def writer_node(state: AgentState) -> dict:
                 image_attached = True
                 logger.info("Attached image to prompt", url=article.image_url)
 
+    critique_history = state.get("critique_history", [])
+    if critique_history:
+        last_critique = critique_history[-1]
+        previous_draft = state.get("draft")
+
+        logger.info("Writer received feedback", feedback=last_critique.feedback)
+
+        feedback_prompt = f"""
+        ⚠️ IMPORTANT: FEEDBACK ON PREVIOUS VERSION
+        Your previous draft was REJECTED with score {last_critique.score}/10.
+        
+        PREVIOUS DRAFT:
+        {previous_draft.content if previous_draft else "N/A"}
+        
+        EDITOR FEEDBACK:
+        "{last_critique.feedback}"
+        
+        INSTRUCTION:
+        Rewrite the tweet to address this feedback explicitly. Improve it.
+        """
+
+        content_blocks.append(
+            {
+                "type": "text",
+                "text": feedback_prompt,
+            },
+        )
+
     llm = get_llm(temperature=0.7)
 
     messages = [
@@ -76,7 +110,10 @@ def writer_node(state: AgentState) -> dict:
 
         logger.info("Draft generated successfully")
         draft.media_files = list(set(draft.media_files))
-        return {"draft": draft}
+        return {
+            "draft": draft,
+            "iteration_count": new_iter,
+        }
 
     except Exception as e:
         logger.error("Writer failed to generate draft", error=str(e))
