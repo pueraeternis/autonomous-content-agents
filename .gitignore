@@ -1,3 +1,5 @@
 .env
 tests/__pycache__
 tests/integration/__pycache__
+src/content_agents/__pycache__
+src/content_agents/core/__pycache__
