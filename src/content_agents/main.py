@@ -16,6 +16,8 @@ def run_once() -> None:
         "critique_history": [],
         "iteration_count": 0,
         "final_tweet_id": None,
+        "tried_rubrics": [],
+        "selected_article": None,
     }
 
     try:

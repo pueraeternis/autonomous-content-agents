@@ -22,7 +22,7 @@ class NewsFetcherService:
         self.time_window_hours = time_window_hours
         self._sources_cache = None
 
-    def _load_sources(self) -> list[dict]:
+    def load_sources(self) -> list[dict]:
         """Load sources from JSON with caching."""
         if self._sources_cache:
             return self._sources_cache

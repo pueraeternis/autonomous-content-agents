@@ -10,62 +10,47 @@ from src.content_agents.schemas.data_types import TweetDraft
 parser = PydanticOutputParser(pydantic_object=TweetDraft)
 
 SYSTEM_PROMPT = """You are a Senior Tech Journalist writing for X (Twitter).
-Your goal is to write a viral, engaging, and factual tweet based on the provided news articles.
+
+YOUR TASK:
+Write a viral, engaging tweet about the provided news article.
 
 GUIDELINES:
-1. Hook: Start with a strong, attention-grabbing first line.
-2. Value: Explain WHY this matters to the AI engineer or tech enthusiast.
-3. Tone: Professional yet conversational. Avoid marketing fluff.
-4. Media: If images are provided, reference them if relevant.
-5. Hashtags: Use 2-3 relevant hashtags at the end.
-
-CRITICAL CONSTRAINTS:
-- LENGTH: The tweet MUST be strictly under 280 characters (including spaces and hashtags).
-- STRUCTURE: Write a SINGLE tweet. Do NOT write threads (1/X).
-- CLARITY: Be concise. Use abbreviations if necessary (e.g., "w/" instead of "with"), but keep it readable.
+1. Hook: Start with a strong insight or breaking news alert.
+2. Value: Explain the impact for AI engineers or tech enthusiasts.
+3. Tone: Professional, concise, no marketing fluff.
+4. Constraints: STRICTLY under 280 characters. NO Threads.
 
 OUTPUT FORMAT:
-You MUST return a JSON object matching the following schema:
 {format_instructions}
 """
 
 
 def writer_node(state: AgentState) -> dict:
-    logger.info("Writer Agent starting...", topic=state["topic"])
+    logger.info("Writer Agent starting...")
 
     current_iter = state.get("iteration_count", 0)
     new_iter = current_iter
-
     if state.get("critique_history"):
         new_iter += 1
 
-    articles = state["articles"]
-    if not articles:
-        logger.warning("No articles to write about.")
+    article = state.get("selected_article")
+    if not article:
+        logger.error("Writer received no selected article!")
         return {"draft": None}
 
-    content_blocks = []
-    articles_text = "\n\n".join([a.to_markdown() for a in articles])
-    content_blocks.append(
-        {
-            "type": "text",
-            "text": f"TOPIC: {state['topic']}\n\nSOURCE MATERIALS:\n{articles_text}",
-        },
-    )
+    content_blocks = [
+        {"type": "text", "text": f"SOURCE MATERIAL:\n{article.to_markdown()}"},
+    ]
 
     image_attached = False
-    for article in articles:
-        if article.image_url and not image_attached:
-            b64_img = download_image_as_base64(article.image_url)
-            if b64_img:
-                content_blocks.append(
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/jpeg;base64,{b64_img}"},
-                    },
-                )
-                image_attached = True
-                logger.info("Attached image to prompt", url=article.image_url)
+    if article.image_url:
+        b64_img = download_image_as_base64(article.image_url)
+        if b64_img:
+            content_blocks.append(
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64_img}"}},
+            )
+            image_attached = True
+            logger.info("Attached image to prompt", url=article.image_url)
 
     critique_history = state.get("critique_history", [])
     if critique_history:
@@ -77,23 +62,18 @@ def writer_node(state: AgentState) -> dict:
         feedback_prompt = f"""
         ⚠️ IMPORTANT: FEEDBACK ON PREVIOUS VERSION
         Your previous draft was REJECTED with score {last_critique.score}/10.
-        
+
         PREVIOUS DRAFT:
         {previous_draft.content if previous_draft else "N/A"}
-        
+
         EDITOR FEEDBACK:
         "{last_critique.feedback}"
-        
+
         INSTRUCTION:
-        Rewrite the tweet to address this feedback explicitly. Improve it.
+        Rewrite the tweet to address this feedback explicitly. Keep it under 280 chars.
         """
 
-        content_blocks.append(
-            {
-                "type": "text",
-                "text": feedback_prompt,
-            },
-        )
+        content_blocks.append({"type": "text", "text": feedback_prompt})
 
     llm = get_llm(temperature=0.7)
 
@@ -106,18 +86,11 @@ def writer_node(state: AgentState) -> dict:
         response = llm.invoke(messages)
         draft = parser.parse(response.content)
 
-        if image_attached:
-            for art in articles:
-                if art.image_url:
-                    draft.media_files.append(art.image_url)
-                    break
+        draft.media_files = [article.image_url] if image_attached else []
 
-        logger.info("Draft generated successfully")
-        draft.media_files = list(set(draft.media_files))
-        return {
-            "draft": draft,
-            "iteration_count": new_iter,
-        }
+        logger.info("Draft generated successfully", content_snippet=draft.content[:50])
+
+        return {"draft": draft, "iteration_count": new_iter}
 
     except Exception as e:
         logger.error("Writer failed to generate draft", error=str(e))

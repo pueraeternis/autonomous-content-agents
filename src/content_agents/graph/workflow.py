@@ -2,6 +2,7 @@ from langgraph.graph import END, StateGraph
 
 from src.content_agents.agents.collector import collector_node
 from src.content_agents.agents.critic import critic_node
+from src.content_agents.agents.editor import editor_node
 from src.content_agents.agents.publisher import publisher_node
 from src.content_agents.agents.writer import writer_node
 from src.content_agents.core.logger import logger
@@ -10,48 +11,55 @@ from src.content_agents.graph.state import AgentState
 MAX_ITERATIONS = 3
 
 
+def check_news_availability(state: AgentState) -> str:
+    articles = state.get("articles", [])
+    if articles:
+        return "editor"
+
+    if state.get("topic") == "None":
+        logger.warning("🏁 No news found in any rubric. Add more sources!")
+        return "end"
+
+    logger.info("🔄 No news in this rubric. Retrying with another...")
+    return "collector"
+
+
 def should_publish(state: AgentState) -> str:
-    """
-    Conditional edge logic:
-    Determines whether to publish, retry writing, or stop.
-    """
     critique_history = state.get("critique_history", [])
     iteration = state.get("iteration_count", 0)
 
     if not critique_history:
         return "critic"
-
-    last_critique = critique_history[-1]
-
-    if last_critique.is_approved:
-        logger.info("Draft approved! Sending to publisher.")
+    if critique_history[-1].is_approved:
         return "publisher"
-
     if iteration < MAX_ITERATIONS:
-        logger.info("Draft rejected. Retrying...", iteration=iteration + 1)
         return "writer"
-
-    logger.warning("Max iterations reached. Stopping.")
     return "end"
 
 
-# --- Build the Graph ---
 workflow = StateGraph(AgentState)
 
-# Nodes
 workflow.add_node("collector", collector_node)
+workflow.add_node("editor", editor_node)
 workflow.add_node("writer", writer_node)
 workflow.add_node("critic", critic_node)
 workflow.add_node("publisher", publisher_node)
 
-# Entry point
 workflow.set_entry_point("collector")
 
-# Linear flow
-workflow.add_edge("collector", "writer")
+workflow.add_conditional_edges(
+    "collector",
+    check_news_availability,
+    {
+        "editor": "editor",
+        "collector": "collector",
+        "end": END,
+    },
+)
+
+workflow.add_edge("editor", "writer")
 workflow.add_edge("writer", "critic")
 
-# Conditional edges after Critic
 workflow.add_conditional_edges(
     "critic",
     should_publish,
@@ -63,7 +71,6 @@ workflow.add_conditional_edges(
     },
 )
 
-# Edge after Publisher -> End
 workflow.add_edge("publisher", END)
 
 app = workflow.compile()
