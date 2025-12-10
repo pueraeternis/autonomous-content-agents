@@ -1,0 +1,27 @@
+# Git
+.git
+.gitignore
+
+# Python / Environment
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Testing & Linting
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+tests/ 
+
+# Project specific
+.env*  
+*.log
+notebooks/

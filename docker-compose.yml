@@ -1,29 +1,30 @@
 services:
-  # App
-  app:
+  agent:
     build: .
-    volumes:
-      - ./src:/app/src
-      - ./config:/app/config
-      - ./data:/app/data
-    environment:
-      - OPENAI_API_KEY=${VLLM_API_KEY}
-      - OPENAI_API_BASE=http://vllm:8000/v1
+    container_name: content_agent
+    restart: unless-stopped  
     depends_on:
       vllm:
         condition: service_healthy
-    command: tail -f /dev/null
+    volumes:
+      - ./data:/app/data
+    env_file:
+      - .env
+    environment:
+      - OPENAI_API_BASE=http://vllm:8000/v1
+      - LOG_LEVEL=INFO
+    command: ["python", "-m", "src.content_agents.main", "--loop", "--interval", "3600"]
 
-  # vLLM Server
   vllm:
     image: vllm/vllm-openai:latest
+    container_name: vllm_server
     runtime: nvidia
     environment:
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
     volumes:
       - ~/.cache/huggingface:/root/.cache/huggingface
     ports:
-      - "8000:8000"
+      - "8000:8000" 
     ipc: host
     command: >
       --model ${MODEL_NAME}
@@ -33,7 +34,6 @@ services:
       --dtype ${DTYPE}
       --trust-remote-code
       --enforce-eager
-    
     deploy:
       resources:
         reservations:
