@@ -21,7 +21,6 @@ RUN uv sync --frozen --no-install-project --no-dev
 # 3. Copy source code
 COPY src ./src
 COPY data ./data
-COPY config ./config
 # README is needed only if it is used in setup; otherwise may be skipped
 COPY README.md .
 
