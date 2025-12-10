@@ -59,7 +59,7 @@ graph TD
 
 ### 1. Clone & Configure
 ```bash
-git clone https://github.com/your-username/autonomous-content-agents.git
+git clone https://github.com/pueraeternis/autonomous-content-agents.git
 cd autonomous-content-agents
 
 # Create environment variables
