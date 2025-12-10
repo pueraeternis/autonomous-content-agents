@@ -1,6 +1,7 @@
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.output_parsers import PydanticOutputParser
 
+from src.content_agents.core.config import settings
 from src.content_agents.core.llm import get_llm
 from src.content_agents.core.logger import logger
 from src.content_agents.graph.state import AgentState
@@ -8,25 +9,22 @@ from src.content_agents.schemas.data_types import Critique
 
 parser = PydanticOutputParser(pydantic_object=Critique)
 
-MAX_POST_LENGTH = 280
-
-SYSTEM_PROMPT = """You are a Senior Chief Editor at a top-tier tech news outlet.
+SYSTEM_PROMPT = f"""You are a Senior Chief Editor at a top-tier tech news outlet.
 Your job is to CRITIQUE the provided tweet draft based on the source articles.
 
 CRITERIA:
-1. Length: Is it strictly under 280 characters? (CRITICAL - Reject immediately if longer).
+1. Length: Is it strictly under {settings.twitter_max_length} characters? (CRITICAL - Reject immediately if longer).
 2. Factuality: Does the tweet contradict the source articles?
 3. Value: Is it boring? Does it lack specific details?
-4. Style: Is it cringe? (Too many emojis, robotic phrasing).
 
 SCORING:
-- 1-5: Reject. Factual errors or OVER 280 CHARACTERS.
-- 6-7: Reject. Needs polish (better hook, make it shorter).
+- 1-5: Reject. Factual errors or OVER {settings.twitter_max_length} CHARACTERS.
+- 6-7: Reject. Needs polish.
 - 8-10: Approve. Ready for publication.
 
 OUTPUT FORMAT:
 Return a JSON matching the following schema:
-{format_instructions}
+{{format_instructions}}
 """
 
 
@@ -43,14 +41,14 @@ def critic_node(state: AgentState) -> dict:
         return {}
 
     # --- HARD CONSTRAINT CHECK (Python side) ---
-    if len(draft.content) > MAX_POST_LENGTH:
+    if len(draft.content) > settings.twitter_max_length:
         logger.warning("Draft is too long, rejecting automatically.", length=len(draft.content))
         return {
             "critique_history": [
                 Critique(
                     score=2,
                     is_approved=False,
-                    feedback=f"Too long! The draft is {len(draft.content)} characters, but the limit is 280. Shorten it significantly.",
+                    feedback=f"Too long! The draft is {len(draft.content)} characters, but the limit is {settings.twitter_max_length}. Shorten it significantly.",
                 ),
             ],
         }

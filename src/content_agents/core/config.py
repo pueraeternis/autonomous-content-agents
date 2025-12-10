@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     environment: str = "development"
 
+    # --- Twitter/X Limits ---
+    twitter_max_length: int = 280
+    writer_target_length: int = 240
+
     # --- Twitter/X Credentials ---
     twitter_api_key: SecretStr | None = Field(default=None, alias="API_KEY")
     twitter_api_secret: SecretStr | None = Field(default=None, alias="API_KEY_SECRET")
