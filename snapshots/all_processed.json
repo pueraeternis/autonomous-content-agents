@@ -1,0 +1,18 @@
+{
+  "version": "1",
+  "description": "Replay input where all snapshot articles are already in history, exercising the no-news termination path.",
+  "topic": "Major Releases (Must-Know)",
+  "articles": [
+    {
+      "title": "Previously published story",
+      "content": "This article was already processed and should be filtered out during replay.",
+      "url": "https://example.com/article-already-published",
+      "source": "Tech News",
+      "published_at": "2026-01-10T08:00:00+00:00",
+      "image_url": null
+    }
+  ],
+  "processed_urls": [
+    "https://example.com/article-already-published"
+  ]
+}

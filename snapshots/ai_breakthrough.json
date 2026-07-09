@@ -1,0 +1,16 @@
+{
+  "version": "1",
+  "description": "Happy-path replay input with one fresh article in the Major Releases rubric.",
+  "topic": "Major Releases (Must-Know)",
+  "articles": [
+    {
+      "title": "Breakthrough in local inference",
+      "content": "Researchers announced a new technique for running 27B parameter models on a single GPU with improved throughput and lower latency. The approach combines quantization-aware training with dynamic batching.",
+      "url": "https://example.com/article-ai-breakthrough",
+      "source": "Tech News",
+      "published_at": "2026-01-15T10:00:00+00:00",
+      "image_url": null
+    }
+  ],
+  "processed_urls": []
+}

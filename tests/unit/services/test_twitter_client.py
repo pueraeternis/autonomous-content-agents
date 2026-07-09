@@ -20,7 +20,7 @@ def test_post_tweet_mock_mode_returns_explicit_result() -> None:
 def test_post_tweet_live_failure_returns_unsuccessful_result() -> None:
     client = TwitterClient.__new__(TwitterClient)
     mock_tweepy = MagicMock()
-    client.client = mock_tweepy  # type: ignore[assignment]
+    client.client = mock_tweepy
     mock_tweepy.create_tweet.side_effect = RuntimeError("API down")
 
     result = client.post_tweet("hello")

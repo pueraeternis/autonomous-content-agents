@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup, Tag
 from dateutil import parser as date_parser
 
 from content_agents.core.logger import logger
+from content_agents.engineering.replay import ReplayContext
 from content_agents.schemas.data_types import NewsArticle
 
 
@@ -103,6 +104,15 @@ class NewsFetcherService:
 
     def fetch_news_from_rubric(self, rubric: dict[str, Any]) -> list[NewsArticle]:
         """Parse all feeds in the given rubric and filters by time."""
+        replay = ReplayContext.active()
+        if replay is not None and rubric.get("rubric") == replay.snapshot.topic:
+            logger.info(
+                "Replay mode: returning snapshot articles",
+                rubric=replay.snapshot.topic,
+                count=len(replay.snapshot.articles),
+            )
+            return list(replay.snapshot.articles)
+
         articles = []
         now = datetime.now(UTC)
 

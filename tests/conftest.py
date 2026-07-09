@@ -5,13 +5,12 @@ from __future__ import annotations
 import json
 from collections.abc import Generator
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 import requests
 
 from content_agents.core.config import settings
-from content_agents.services import history as history_module
+from content_agents.services.history import history_service
 
 
 @pytest.fixture
@@ -39,9 +38,7 @@ def tmp_history_file(tmp_path: Path) -> Generator[Path, None, None]:
     history_path = tmp_path / "history.json"
     history_path.write_text(json.dumps({"urls": []}), encoding="utf-8")
 
-    with patch.object(history_module, "HISTORY_FILE", history_path):
-        history_module.history_service.processed_urls = set()
-        yield history_path
-
-    history_module.history_service.processed_urls = set()
-    history_module.history_service._load()
+    original_file = history_service.history_file
+    history_service.use_file(history_path)
+    yield history_path
+    history_service.use_file(original_file)

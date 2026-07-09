@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -28,10 +28,12 @@ def test_publisher_live_failure_sets_publish_failed() -> None:
     )
     state = create_initial_state(draft=draft, selected_article=article)
     mock_result = PublishResult(mode="live", tweet_id=None, success=False)
+    mock_publisher = MagicMock()
+    mock_publisher.publish.return_value = mock_result
 
     with patch(
-        "content_agents.agents.publisher.twitter_service.post_tweet",
-        return_value=mock_result,
+        "content_agents.agents.publisher.get_publisher",
+        return_value=mock_publisher,
     ):
         update = publisher_node(state)
 
@@ -51,11 +53,13 @@ def test_publisher_mock_mode_sets_publish_mode() -> None:
     state = create_initial_state(draft=draft, selected_article=article)
 
     mock_result = PublishResult(mode="mock", tweet_id=None, success=True)
+    mock_publisher = MagicMock()
+    mock_publisher.publish.return_value = mock_result
 
     with (
         patch(
-            "content_agents.agents.publisher.twitter_service.post_tweet",
-            return_value=mock_result,
+            "content_agents.agents.publisher.get_publisher",
+            return_value=mock_publisher,
         ),
         patch("content_agents.agents.publisher.history_service.add") as mock_add,
     ):
@@ -80,11 +84,13 @@ def test_publisher_live_mode_sets_tweet_id() -> None:
     state = create_initial_state(draft=draft, selected_article=article)
 
     mock_result = PublishResult(mode="live", tweet_id="12345", success=True)
+    mock_publisher = MagicMock()
+    mock_publisher.publish.return_value = mock_result
 
     with (
         patch(
-            "content_agents.agents.publisher.twitter_service.post_tweet",
-            return_value=mock_result,
+            "content_agents.agents.publisher.get_publisher",
+            return_value=mock_publisher,
         ),
         patch("content_agents.agents.publisher.history_service.add"),
     ):

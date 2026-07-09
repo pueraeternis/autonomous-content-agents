@@ -1,0 +1,26 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	collector(collector)
+	editor(editor)
+	writer(writer)
+	critic(critic)
+	publisher(publisher)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> collector;
+	collector -. &nbsp;end&nbsp; .-> __end__;
+	collector -.-> editor;
+	critic -. &nbsp;end&nbsp; .-> __end__;
+	critic -.-> publisher;
+	critic -.-> writer;
+	editor --> writer;
+	writer --> critic;
+	publisher --> __end__;
+	collector -.-> collector;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

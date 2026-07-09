@@ -38,19 +38,7 @@ See [ADR 001](docs/adr/001-use-langgraph.md) for the full decision record.
 
 The cognitive process is modeled as a directed cyclic graph with five nodes and two conditional routers.
 
-```mermaid
-graph TD
-    START --> collector
-    collector -->|articles found| editor
-    collector -->|no articles, rubrics remain| collector
-    collector -->|all rubrics exhausted| END
-    editor --> writer
-    writer --> critic
-    critic -->|approved| publisher
-    critic -->|rejected, rewrites remain| writer
-    critic -->|else| END
-    publisher --> END
-```
+> **Auto-generated graph:** [`docs/assets/workflow.mmd`](docs/assets/workflow.mmd) — regenerate with `uv run aca-visualize`. For the engineering workflow (replay, inspection, publisher switching), see [docs/ENGINEERING.md](docs/ENGINEERING.md).
 
 **Routers:**
 
@@ -105,11 +93,15 @@ src/
 │   ├── core/            # Config, logger, LLM factory
 │   ├── graph/           # LangGraph workflow, state, routing
 │   ├── schemas/         # Domain types (NewsArticle, TweetDraft, Critique)
-│   ├── services/        # External integrations (RSS, Twitter, history)
+│   ├── engineering/     # Visualization, replay, snapshot utilities
+│   ├── services/        # External integrations (RSS, publishers, history)
 │   └── main.py          # Entry point (single run or daemon loop)
 docs/
 ├── ARCHITECTURE.md      # Detailed architecture documentation
+├── ENGINEERING.md       # Developer workflow (replay, visualize, inspect)
 └── adr/                 # Architecture Decision Records
+snapshots/               # Replay input snapshots
+examples/outputs/        # Sample publisher output (markdown adapter)
 ```
 
 ---
@@ -136,7 +128,7 @@ These are intentional scope boundaries for v0.1, not oversights:
 
 | Area | Limitation |
 |------|------------|
-| **Publishing** | Twitter/X text-only; media upload is skipped; mock publish when credentials are absent; no other platforms |
+| **Publishing** | Twitter/X (default), console, and markdown adapters; Twitter text-only; mock publish when credentials are absent |
 | **Persistence** | No LangGraph checkpointing; workflow state is ephemeral per run; only processed URLs persist in `history.json` |
 | **Human oversight** | Fully automated; no approval gates, interrupts, or human-in-the-loop |
 | **Multimodal** | Optional image in Writer LLM prompt only; Editor and Critic are text-only; Publisher does not attach media |
@@ -195,13 +187,22 @@ uv run pytest -m integration
 
 # Run the workflow once
 uv run python -m content_agents.main
+
+# Engineering demo (no Twitter or RSS network required)
+uv run python -m content_agents.main \
+  --replay snapshots/ai_breakthrough.json \
+  --publisher console \
+  --inspect
 ```
+
+See [docs/ENGINEERING.md](docs/ENGINEERING.md) for the full engineering workflow.
 
 ---
 
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md) — workflow graph, state model, design trade-offs
+- [Engineering](docs/ENGINEERING.md) — replay, visualization, inspection, publisher adapters
 - [ADR 001: LangGraph](docs/adr/001-use-langgraph.md) — orchestration framework choice
 - [ADR 002: vLLM](docs/adr/002-local-inference-vllm.md) — local inference decision
 

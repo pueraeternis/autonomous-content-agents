@@ -28,19 +28,12 @@ Agents import concrete service singletons directly. There are no abstract ports 
 
 The workflow is a `StateGraph` compiled without a checkpointer — each `app.invoke()` starts with fresh state and runs to completion.
 
-```mermaid
-graph TD
-    START --> collector
-    collector -->|articles found| editor
-    collector -->|no articles, rubrics remain| collector
-    collector -->|all rubrics exhausted| END
-    editor --> writer
-    writer --> critic
-    critic -->|approved| publisher
-    critic -->|rejected, rewrites remain| writer
-    critic -->|else| END
-    publisher --> END
-```
+> **Auto-generated from the compiled graph.** See [`docs/assets/workflow.mmd`](assets/workflow.mmd). Regenerate: `uv run aca-visualize`
+
+Dotted edges in the generated diagram are conditional routes. Router semantics:
+
+- **Collector** → `editor` when articles are found; → `collector` when the rubric is empty but others remain; → `END` when all rubrics are exhausted
+- **Critic** → `publisher` when approved; → `writer` when rejected with rewrites remaining; → `END` otherwise
 
 ### Nodes
 
@@ -50,7 +43,7 @@ graph TD
 | `editor` | `editor_node` | LLM (temperature 0.1) |
 | `writer` | `writer_node` | LLM (temperature 0.7), optional image download |
 | `critic` | `critic_node` | LLM (temperature 0.0) |
-| `publisher` | `publisher_node` | `twitter_service`, `history_service` |
+| `publisher` | `publisher_node` | `get_publisher()`, `history_service` |
 
 ### Conditional Routers
 
@@ -136,7 +129,7 @@ State is **ephemeral** — it exists only for the duration of a single `app.invo
 ### Publisher
 
 - `_smart_truncate()` as a safety net if draft still exceeds platform limit
-- Calls `twitter_service.post_tweet(text, media_urls)`
+- Calls `get_publisher().publish(text, media_urls)` — adapter selected via `PUBLISHER` env or CLI `--publisher`
 - On success (live or mock): records article URL in `history.json`
 - Returns `final_tweet_id`, `publish_mode`, `termination_reason`
 
@@ -158,12 +151,17 @@ State is **ephemeral** — it exists only for the duration of a single `app.invo
 - Per-agent temperatures: Editor 0.1, Writer 0.7, Critic 0.0
 - Output parsing via `PydanticOutputParser` (expects JSON in LLM response)
 
-### Publisher Adapter (`TwitterClient`)
+### Publisher Adapters
 
-- OAuth 1.0a authentication via tweepy
-- **Live mode:** `create_tweet(text=...)` — text only; media upload is skipped
-- **Mock mode:** when credentials are absent, returns success without posting (still records URL in history)
-- Sole publisher implementation; designed as a replaceable service integration
+Publishing is separated from the workflow via a lightweight `Publisher` protocol in `services/publishers/`.
+
+| Adapter | Class | Behavior |
+|---------|-------|----------|
+| `twitter` (default) | `TwitterPublisher` | OAuth 1.0a via tweepy; text-only; mock mode without credentials |
+| `console` | `ConsolePublisher` | Prints approved content to stdout |
+| `markdown` | `MarkdownPublisher` | Writes output to `examples/outputs/` |
+
+The workflow graph and `publisher_node` logic are unchanged when switching adapters. See [ENGINEERING.md](ENGINEERING.md) for usage.
 
 ### URL History (`HistoryManager`)
 
@@ -212,9 +210,9 @@ When Twitter credentials are absent, the Publisher returns a successful mock res
 
 The graph compiles without a checkpointer. Workflow state is ephemeral per run. Only processed URLs persist. This simplifies the v0.1 implementation; durable execution is a known future extension.
 
-### Direct service imports over ports/adapters
+### Direct service imports with publisher protocol
 
-Agents import concrete singletons (`twitter_service`, `news_service`, `history_service`). This reduces boilerplate for a reference implementation. Extracting protocols behind interfaces is straightforward if additional publishers or data sources are added.
+Agents import concrete singletons for RSS and history (`news_service`, `history_service`). Publishing uses a lightweight `Publisher` protocol with a factory (`get_publisher()`), keeping the workflow decoupled from delivery mechanisms without a full DI container.
 
 ---
 
@@ -222,7 +220,7 @@ Agents import concrete singletons (`twitter_service`, `news_service`, `history_s
 
 | Area | Limitation |
 |------|------------|
-| **Publishing** | Twitter/X text-only; media upload skipped; mock publish without credentials; no other platforms |
+| **Publishing** | Twitter (default), console, and markdown adapters; Twitter text-only; mock publish without credentials |
 | **Persistence** | No LangGraph checkpointing; workflow state ephemeral; only URLs in `history.json` |
 | **Human oversight** | Fully automated; no approval gates or interrupts |
 | **Multimodal** | Optional image in Writer prompt only; Editor, Critic, and Publisher are text-only |
@@ -236,6 +234,7 @@ Agents import concrete singletons (`twitter_service`, `news_service`, `history_s
 
 ## Related Documentation
 
+- [Engineering Workflow](ENGINEERING.md)
 - [ADR 001: LangGraph](adr/001-use-langgraph.md)
 - [ADR 002: vLLM](adr/002-local-inference-vllm.md)
 - [README](../README.md)

@@ -1,5 +1,9 @@
+from typing import Literal
+
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+PublisherName = Literal["twitter", "console", "markdown"]
 
 
 class Settings(BaseSettings):
@@ -15,6 +19,7 @@ class Settings(BaseSettings):
     # --- App Settings ---
     log_level: str = "INFO"
     environment: str = "development"
+    publisher: PublisherName = Field(default="twitter", alias="PUBLISHER")
 
     # --- Twitter/X Limits ---
     twitter_max_length: int = 280

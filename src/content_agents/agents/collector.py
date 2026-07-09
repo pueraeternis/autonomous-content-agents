@@ -1,7 +1,8 @@
 import random
-from typing import Any
+from typing import Any, cast
 
 from content_agents.core.logger import logger
+from content_agents.engineering.replay import ReplayContext
 from content_agents.graph.state import AgentState
 from content_agents.services.history import history_service
 from content_agents.services.news_fetcher import news_service
@@ -34,9 +35,26 @@ def collector_node(state: AgentState) -> dict[str, Any]:
             "termination_reason": "no_news",
         }
 
-    weights = [r.get("weight", 1.0) for r in available_rubrics]
-    selected_rubric = random.choices(available_rubrics, weights=weights, k=1)[0]
-    topic = selected_rubric["rubric"]
+    replay = ReplayContext.active()
+    if replay is not None:
+        if replay.snapshot.topic in tried:
+            logger.info(
+                "Replay mode: snapshot rubric already attempted with no fresh articles"
+            )
+            return {
+                "articles": [],
+                "topic": "None",
+                "termination_reason": "no_news",
+            }
+        topic = replay.snapshot.topic
+        selected_rubric = next(
+            (r for r in available_rubrics if r["rubric"] == topic),
+            {"rubric": topic, "sources": []},
+        )
+    else:
+        weights = [r.get("weight", 1.0) for r in available_rubrics]
+        selected_rubric = random.choices(available_rubrics, weights=weights, k=1)[0]
+        topic = cast(str, selected_rubric["rubric"])
 
     logger.info("Checking rubric", rubric=topic)
 

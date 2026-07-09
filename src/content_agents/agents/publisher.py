@@ -4,7 +4,7 @@ from content_agents.core.config import settings
 from content_agents.core.logger import logger
 from content_agents.graph.state import AgentState
 from content_agents.services.history import history_service
-from content_agents.services.twitter_client import twitter_service
+from content_agents.services.publishers.factory import get_publisher
 
 
 def _smart_truncate(content: str, max_length: int) -> str:
@@ -65,7 +65,7 @@ def publisher_node(state: AgentState) -> dict[str, Any]:
             result_snippet=content[-30:],
         )
 
-    result = twitter_service.post_tweet(
+    result = get_publisher().publish(
         text=content,
         media_urls=draft.media_files,
     )
