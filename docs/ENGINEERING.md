@@ -179,6 +179,39 @@ Big AI news today: researchers unveiled a faster local inference stack.
 
 ---
 
+## Twitter/X Smoke Post (Manual Diagnostics)
+
+[`scripts/twitter_smoke_post.py`](../scripts/twitter_smoke_post.py) is a standalone diagnostic for verifying X API credentials and `create_tweet` behavior. It loads the same `.env` settings as the app but does **not** run LangGraph, RSS, vLLM, or Docker Compose.
+
+**Not part of CI** — run manually when debugging publisher credentials or Tweepy auth modes.
+
+Dry-run (default — validates credentials, does not post):
+
+```bash
+uv run python scripts/twitter_smoke_post.py \
+  --text "X API smoke test from autonomous-content-agents"
+```
+
+Live post (requires explicit `--yes`):
+
+```bash
+uv run python scripts/twitter_smoke_post.py \
+  --text "X API smoke test from autonomous-content-agents" \
+  --mode user-auth \
+  --yes
+```
+
+Modes:
+
+| `--mode` | Tweepy call |
+|----------|-------------|
+| `default` | `client.create_tweet(text=text)` |
+| `user-auth` | `client.create_tweet(text=text, user_auth=True)` |
+
+The script prints credential presence and lengths only (never secret values), Tweepy version, selected mode, and structured exception diagnostics on failure.
+
+---
+
 ## Testing
 
 ```bash
@@ -203,7 +236,7 @@ uv run pytest -m integration
 uv sync
 uv run ruff check .
 uv run ruff format --check .
-uv run mypy src tests
+uv run mypy src tests scripts
 uv run pytest
 uv run aca-visualize
 git diff --exit-code docs/assets/workflow.mmd
