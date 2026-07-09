@@ -12,5 +12,16 @@
       "image_url": null
     }
   ],
-  "processed_urls": []
+  "processed_urls": [],
+  "llm_outputs": {
+    "editor": [
+      "{\"index\": 0, \"reasoning\": \"Most impactful story: major inference breakthrough for engineers\"}"
+    ],
+    "writer": [
+      "{\"content\": \"Big AI news today: researchers unveiled a faster local inference stack for 27B models.\", \"reasoning\": \"Strong hook on a timely breakthrough\", \"media_files\": []}"
+    ],
+    "critic": [
+      "{\"score\": 9, \"feedback\": \"Ready to publish\", \"is_approved\": true}"
+    ]
+  }
 }

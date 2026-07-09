@@ -188,7 +188,7 @@ uv run pytest -m integration
 # Run the workflow once
 uv run python -m content_agents.main
 
-# Engineering demo (no Twitter or RSS network required)
+# Engineering demo (no Twitter, RSS network, or vLLM required)
 uv run python -m content_agents.main \
   --replay snapshots/ai_breakthrough.json \
   --publisher console \

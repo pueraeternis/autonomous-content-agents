@@ -99,7 +99,7 @@ def writer_node(state: AgentState) -> dict[str, Any]:
             },
         )
 
-    llm = get_llm(temperature=0.7)
+    llm = get_llm(temperature=0.7, role="writer")
 
     messages = [
         SystemMessage(

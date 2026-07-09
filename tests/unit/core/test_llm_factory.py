@@ -1,4 +1,5 @@
 import pytest
+from langchain_openai import ChatOpenAI
 
 from content_agents.core.config import settings
 from content_agents.core.llm import get_llm
@@ -10,6 +11,7 @@ def test_llm_factory_configuration() -> None:
     Unit test to ensure the LLM factory picks up settings correctly.
     """
     llm = get_llm()
+    assert isinstance(llm, ChatOpenAI)
 
     assert llm.model_name == settings.model_name
     assert llm.openai_api_base == settings.openai_api_base
@@ -30,6 +32,7 @@ def test_llm_factory_override() -> None:
     """Test that we can override default parameters."""
     custom_temp = 0.1
     llm = get_llm(temperature=custom_temp)
+    assert isinstance(llm, ChatOpenAI)
 
     assert llm.temperature == custom_temp
     assert llm.model_name == settings.model_name

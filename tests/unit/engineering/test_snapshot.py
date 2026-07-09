@@ -39,6 +39,11 @@ def test_committed_snapshots_validate() -> None:
         assert snapshot.topic
         assert isinstance(snapshot.articles, list)
 
+    happy_path = WorkflowSnapshot.load(repo_root / "snapshots" / "ai_breakthrough.json")
+    assert "editor" in happy_path.llm_outputs
+    assert "writer" in happy_path.llm_outputs
+    assert "critic" in happy_path.llm_outputs
+
 
 @pytest.mark.unit
 def test_snapshot_rejects_invalid_version(tmp_path: Path) -> None:

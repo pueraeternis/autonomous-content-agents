@@ -33,3 +33,6 @@ env/
 
 # Local configs
 *.log
+
+# Runtime publish artifacts
+examples/outputs/publish_*.md

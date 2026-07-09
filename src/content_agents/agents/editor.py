@@ -38,7 +38,7 @@ def editor_node(state: AgentState) -> dict[str, Any]:
         [f"{i}. {a.title} (Source: {a.source})" for i, a in enumerate(articles)]
     )
 
-    llm = get_llm(temperature=0.1)
+    llm = get_llm(temperature=0.1, role="editor")
 
     messages = [
         SystemMessage(

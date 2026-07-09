@@ -82,7 +82,7 @@ def critic_node(state: AgentState) -> dict[str, Any]:
     {draft.reasoning}
     """
 
-    llm = get_llm(temperature=0.0)
+    llm = get_llm(temperature=0.0, role="critic")
 
     messages = [
         SystemMessage(

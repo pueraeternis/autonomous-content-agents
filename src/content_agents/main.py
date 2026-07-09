@@ -32,7 +32,7 @@ def _execute_workflow(
     if inspect:
         final_state = dict(initial_state)
         for event in app.stream(cast(Any, initial_state), stream_mode="updates"):
-            logger.info("Node update", event=event)
+            logger.info("Node update", workflow_update=event)
             for node_update in event.values():
                 if isinstance(node_update, dict):
                     final_state.update(node_update)

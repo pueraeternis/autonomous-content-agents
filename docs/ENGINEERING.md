@@ -7,7 +7,7 @@ This guide is for developers working on the LangGraph workflow itself — visual
 ## Prerequisites
 
 - [uv](https://docs.astral.sh/uv/) for dependency management
-- Local vLLM for full LLM execution (optional for unit tests)
+- Local vLLM for live mode and integration tests (not required for replay demos)
 - No Twitter credentials required for engineering demos
 
 ---
@@ -42,7 +42,8 @@ Replay characteristics:
 
 - Fixed rubric and articles from the snapshot (no `feedparser` calls)
 - Isolated URL history (does not modify `data/history.json`)
-- LLM output may still vary between runs; input-side replay is deterministic
+- Recorded LLM outputs from the snapshot when present (no vLLM required for demos)
+- Input-side replay is fully deterministic when `llm_outputs` is included
 
 Failure-path demo (all articles already processed):
 
@@ -63,6 +64,7 @@ Snapshots live in [`snapshots/`](../snapshots/) and use version `1` of the `Work
 | `topic` | string | yes | Rubric name (must match a rubric in `data/sources.json`) |
 | `articles` | `NewsArticle[]` | yes | Articles returned instead of live RSS |
 | `processed_urls` | `string[]` | no | URLs treated as already published during replay |
+| `llm_outputs` | `object` | no | Recorded JSON responses per agent role (`editor`, `writer`, `critic`) |
 
 Example:
 
@@ -81,9 +83,22 @@ Example:
       "image_url": null
     }
   ],
-  "processed_urls": []
+  "processed_urls": [],
+  "llm_outputs": {
+    "editor": [
+      "{\"index\": 0, \"reasoning\": \"Most impactful story\"}"
+    ],
+    "writer": [
+      "{\"content\": \"Big AI news today.\", \"reasoning\": \"Strong hook\", \"media_files\": []}"
+    ],
+    "critic": [
+      "{\"score\": 9, \"feedback\": \"Ready to publish\", \"is_approved\": true}"
+    ]
+  }
 }
 ```
+
+Each value in `llm_outputs` is an ordered list of JSON strings matching the agent's Pydantic output schema. During replay, `get_llm(role=...)` returns these responses in order instead of calling vLLM. Snapshots without `llm_outputs` still call the live LLM.
 
 Validate snapshots in unit tests:
 
@@ -173,7 +188,7 @@ uv run pytest
 # Engineering-specific tests
 uv run pytest tests/unit/engineering/ tests/unit/services/publishers/ -v
 
-# Full replay workflow test (mocked LLM, no network)
+# Full replay workflow test (recorded LLM outputs, no network)
 uv run pytest tests/unit/graph/test_replay_workflow.py -v
 
 # Integration tests (manual; requires external services)
