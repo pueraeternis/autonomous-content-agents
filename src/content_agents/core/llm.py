@@ -1,6 +1,6 @@
 from langchain_openai import ChatOpenAI
 
-from src.content_agents.core.config import settings
+from content_agents.core.config import settings
 
 
 def get_llm(temperature: float = 0.7) -> ChatOpenAI:
@@ -12,7 +12,7 @@ def get_llm(temperature: float = 0.7) -> ChatOpenAI:
                      Use 0.0 for extraction/critique, 0.7+ for writing.
 
     """
-    return ChatOpenAI(
+    return ChatOpenAI(  # type: ignore[call-arg]
         model=settings.model_name,
         openai_api_key=settings.openai_api_key.get_secret_value(),
         openai_api_base=settings.openai_api_base,

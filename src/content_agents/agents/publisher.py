@@ -1,8 +1,10 @@
-from src.content_agents.core.config import settings
-from src.content_agents.core.logger import logger
-from src.content_agents.graph.state import AgentState
-from src.content_agents.services.history import history_service
-from src.content_agents.services.twitter_client import twitter_service
+from typing import Any
+
+from content_agents.core.config import settings
+from content_agents.core.logger import logger
+from content_agents.graph.state import AgentState
+from content_agents.services.history import history_service
+from content_agents.services.twitter_client import twitter_service
 
 
 def _smart_truncate(content: str, max_length: int) -> str:
@@ -33,7 +35,7 @@ def _smart_truncate(content: str, max_length: int) -> str:
     return content[: max_length - 1] + "."
 
 
-def publisher_node(state: AgentState) -> dict:
+def publisher_node(state: AgentState) -> dict[str, Any]:
     """
     Publish Agent:
     Takes the approved draft and pushes it to X (Twitter).
@@ -47,7 +49,7 @@ def publisher_node(state: AgentState) -> dict:
 
     if not draft:
         logger.error("No draft to publish.")
-        return {}
+        return {"termination_reason": "publish_failed"}
 
     content = draft.content
     max_len = settings.twitter_max_length
@@ -63,20 +65,32 @@ def publisher_node(state: AgentState) -> dict:
             result_snippet=content[-30:],
         )
 
-    tweet_id = twitter_service.post_tweet(
+    result = twitter_service.post_tweet(
         text=content,
         media_urls=draft.media_files,
     )
 
-    if tweet_id:
-        logger.info("Content cycle finished successfully.", tweet_id=tweet_id)
-
+    if result.success:
+        # Mark article processed on both live and mock publish to preserve dedup workflow.
         if article and article.url:
             history_service.add(article.url)
         else:
-            logger.warning("Published tweet but couldn't find source URL to save in history.")
+            logger.warning(
+                "Published tweet but couldn't find source URL to save in history."
+            )
 
-        return {"final_tweet_id": tweet_id}
+        termination_reason = "published" if result.mode == "live" else "mock_published"
+        logger.info(
+            "Content cycle finished successfully.",
+            mode=result.mode,
+            tweet_id=result.tweet_id,
+        )
+
+        return {
+            "final_tweet_id": result.tweet_id,
+            "publish_mode": result.mode,
+            "termination_reason": termination_reason,
+        }
 
     logger.error("Publishing failed.")
-    return {}
+    return {"termination_reason": "publish_failed"}

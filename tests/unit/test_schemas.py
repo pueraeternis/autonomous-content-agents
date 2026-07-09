@@ -1,6 +1,9 @@
-from src.content_agents.schemas.data_types import NewsArticle
+import pytest
+
+from content_agents.schemas.data_types import NewsArticle
 
 
+@pytest.mark.unit
 def test_article_markdown() -> None:
     art = NewsArticle(
         title="AI News",

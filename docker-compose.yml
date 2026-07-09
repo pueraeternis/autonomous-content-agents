@@ -13,7 +13,7 @@ services:
     environment:
       - OPENAI_API_BASE=http://vllm:8000/v1
       - LOG_LEVEL=INFO
-    command: ["python", "-m", "src.content_agents.main", "--loop", "--interval", "3600"]
+    command: ["python", "-m", "content_agents.main", "--loop", "--interval", "3600"]
 
   vllm:
     image: vllm/vllm-openai:latest

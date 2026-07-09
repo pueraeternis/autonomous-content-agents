@@ -2,7 +2,7 @@ import base64
 
 import requests
 
-from src.content_agents.core.logger import logger
+from content_agents.core.logger import logger
 
 
 def download_image_as_base64(url: str, timeout: int = 10) -> str | None:

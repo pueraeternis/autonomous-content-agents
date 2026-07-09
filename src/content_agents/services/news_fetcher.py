@@ -2,13 +2,14 @@ import json
 import random
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 import feedparser
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from dateutil import parser as date_parser
 
-from src.content_agents.core.logger import logger
-from src.content_agents.schemas.data_types import NewsArticle
+from content_agents.core.logger import logger
+from content_agents.schemas.data_types import NewsArticle
 
 
 class NewsFetcherService:
@@ -17,14 +18,16 @@ class NewsFetcherService:
     Includes logic for weighted rubric selection.
     """
 
-    def __init__(self, sources_path: str = "data/sources.json", time_window_hours: int = 24) -> None:
+    def __init__(
+        self, sources_path: str = "data/sources.json", time_window_hours: int = 24
+    ) -> None:
         self.sources_path = Path(sources_path)
         self.time_window_hours = time_window_hours
-        self._sources_cache = None
+        self._sources_cache: list[dict[str, Any]] | None = None
 
-    def load_sources(self) -> list[dict]:
+    def load_sources(self) -> list[dict[str, Any]]:
         """Load sources from JSON with caching."""
-        if self._sources_cache:
+        if self._sources_cache is not None:
             return self._sources_cache
 
         if not self.sources_path.exists():
@@ -33,15 +36,19 @@ class NewsFetcherService:
 
         try:
             with open(self.sources_path, encoding="utf-8") as f:
-                self._sources_cache = json.load(f)
+                loaded = json.load(f)
+            if not isinstance(loaded, list):
+                logger.error("Sources file must contain a JSON array")
+                return []
+            self._sources_cache = loaded
             return self._sources_cache
         except Exception as e:
             logger.error("Failed to parse sources JSON", error=str(e))
             return []
 
-    def select_rubric(self) -> dict | None:
+    def select_rubric(self) -> dict[str, Any] | None:
         """Select a rubric based on defined weights."""
-        rubrics = self._load_sources()
+        rubrics = self.load_sources()
         if not rubrics:
             return None
 
@@ -60,7 +67,7 @@ class NewsFetcherService:
         soup = BeautifulSoup(html_content, "html.parser")
         return soup.get_text(separator="\n").strip()
 
-    def _extract_image(self, entry: dict) -> str | None:
+    def _extract_image(self, entry: dict[str, Any]) -> str | None:
         """
         Attempt to find an image URL in RSS entry (media_content, enclosure, or summary).
         Crucial for Gemma 3 Multimodal capabilities.
@@ -68,25 +75,33 @@ class NewsFetcherService:
         # 1. Check 'media_content' (standard for many blogs)
         if "media_content" in entry:
             for media in entry["media_content"]:
-                if "image" in media.get("type", "") or ("medium" in media and media["medium"] == "image"):
-                    return media["url"]
+                if "image" in media.get("type", "") or (
+                    "medium" in media and media["medium"] == "image"
+                ):
+                    url = media.get("url")
+                    if isinstance(url, str):
+                        return url
 
         # 2. Check 'links' (enclosures)
         if "links" in entry:
             for link in entry["links"]:
                 if link.get("rel") == "enclosure" and "image" in link.get("type", ""):
-                    return link["href"]
+                    href = link.get("href")
+                    if isinstance(href, str):
+                        return href
 
         # 3. Last resort: parse <img> tag from summary
         if "summary" in entry:
             soup = BeautifulSoup(entry["summary"], "html.parser")
             img = soup.find("img")
-            if img and img.get("src"):
-                return img["src"]
+            if isinstance(img, Tag):
+                src = img.get("src")
+                if isinstance(src, str):
+                    return src
 
         return None
 
-    def fetch_news_from_rubric(self, rubric: dict) -> list[NewsArticle]:
+    def fetch_news_from_rubric(self, rubric: dict[str, Any]) -> list[NewsArticle]:
         """Parse all feeds in the given rubric and filters by time."""
         articles = []
         now = datetime.now(UTC)
@@ -108,7 +123,11 @@ class NewsFetcherService:
                             if published_at.tzinfo is None:
                                 published_at = published_at.replace(tzinfo=UTC)
                         except (ValueError, TypeError, OverflowError) as e:
-                            logger.debug("Failed to parse 'published' date", error=str(e), raw=entry.get("published"))
+                            logger.debug(
+                                "Failed to parse 'published' date",
+                                error=str(e),
+                                raw=entry.get("published"),
+                            )
 
                     # 2. Fallback to 'updated' field
                     if not published_at and "updated" in entry:
@@ -117,7 +136,11 @@ class NewsFetcherService:
                             if published_at and published_at.tzinfo is None:
                                 published_at = published_at.replace(tzinfo=UTC)
                         except (ValueError, TypeError, OverflowError) as e:
-                            logger.debug("Failed to parse 'updated' date", error=str(e), raw=entry.get("updated"))
+                            logger.debug(
+                                "Failed to parse 'updated' date",
+                                error=str(e),
+                                raw=entry.get("updated"),
+                            )
 
                     # Skip if no date or too old
                     if not published_at:
@@ -127,7 +150,9 @@ class NewsFetcherService:
                         continue
 
                     # Extract content
-                    content = self._clean_html(entry.get("summary", "") or entry.get("description", ""))
+                    content = self._clean_html(
+                        entry.get("summary", "") or entry.get("description", "")
+                    )
 
                     article = NewsArticle(
                         title=entry.get("title", "No Title"),

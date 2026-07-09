@@ -1,12 +1,14 @@
+from typing import Any, cast
+
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.output_parsers import PydanticOutputParser
 
-from src.content_agents.core.config import settings
-from src.content_agents.core.llm import get_llm
-from src.content_agents.core.logger import logger
-from src.content_agents.core.utils import download_image_as_base64
-from src.content_agents.graph.state import AgentState
-from src.content_agents.schemas.data_types import TweetDraft
+from content_agents.core.config import settings
+from content_agents.core.llm import get_llm
+from content_agents.core.logger import logger
+from content_agents.core.utils import download_image_as_base64
+from content_agents.graph.state import AgentState
+from content_agents.schemas.data_types import TweetDraft
 
 parser = PydanticOutputParser(pydantic_object=TweetDraft)
 
@@ -26,7 +28,7 @@ OUTPUT FORMAT:
 """
 
 
-def writer_node(state: AgentState) -> dict:
+def writer_node(state: AgentState) -> dict[str, Any]:
     logger.info("Writer Agent starting...")
 
     current_iter = state.get("iteration_count", 0)
@@ -40,7 +42,7 @@ def writer_node(state: AgentState) -> dict:
         logger.error("Writer received no selected article!")
         return {"draft": None}
 
-    content_blocks = []
+    content_blocks: list[dict[str, Any]] = []
 
     content_blocks.append(
         {
@@ -76,15 +78,15 @@ def writer_node(state: AgentState) -> dict:
             instruction = "Rewrite the tweet to address this feedback explicitly."
 
         feedback_prompt = f"""
-        ⚠️ IMPORTANT: FEEDBACK ON PREVIOUS VERSION
+        IMPORTANT: FEEDBACK ON PREVIOUS VERSION
         Your previous draft was REJECTED with score {last_critique.score}/10.
-        
+
         PREVIOUS DRAFT ({len(previous_draft.content) if previous_draft else 0} chars):
         {previous_draft.content if previous_draft else "N/A"}
-        
+
         EDITOR FEEDBACK:
         "{last_critique.feedback}"
-        
+
         INSTRUCTION:
         {instruction}
         Target length: < {settings.writer_target_length} characters.
@@ -100,20 +102,31 @@ def writer_node(state: AgentState) -> dict:
     llm = get_llm(temperature=0.7)
 
     messages = [
-        SystemMessage(content=SYSTEM_PROMPT.format(format_instructions=parser.get_format_instructions())),
-        HumanMessage(content=content_blocks),
+        SystemMessage(
+            content=SYSTEM_PROMPT.format(
+                format_instructions=parser.get_format_instructions()
+            )
+        ),
+        HumanMessage(content=cast(Any, content_blocks)),
     ]
 
     try:
         response = llm.invoke(messages)
-        draft = parser.parse(response.content)
+        content = response.content
+        if not isinstance(content, str):
+            raise TypeError("Expected string content from LLM response")
+        draft = parser.parse(content)
 
-        if image_attached:
+        if image_attached and article.image_url:
             draft.media_files = [article.image_url]
         else:
             draft.media_files = []
 
-        logger.info("Draft generated successfully", content_snippet=draft.content[:50], length=len(draft.content))
+        logger.info(
+            "Draft generated successfully",
+            content_snippet=draft.content[:50],
+            length=len(draft.content),
+        )
 
         return {
             "draft": draft,

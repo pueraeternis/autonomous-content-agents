@@ -1,5 +1,6 @@
 import base64
 import os
+from typing import Any, cast
 
 import pytest
 import requests
@@ -25,6 +26,10 @@ def encode_image_base64(url: str) -> str:
     return base64.b64encode(response.content).decode("utf-8")
 
 
+@pytest.mark.integration
+@pytest.mark.vllm
+@pytest.mark.network
+@pytest.mark.gpu
 @pytest.mark.asyncio
 async def test_gemma_vision_capabilities(llm_client: OpenAI) -> None:
     """
@@ -40,7 +45,10 @@ async def test_gemma_vision_capabilities(llm_client: OpenAI) -> None:
         {
             "role": "user",
             "content": [
-                {"type": "text", "text": "What animal is in this image? Answer in one word."},
+                {
+                    "type": "text",
+                    "text": "What animal is in this image? Answer in one word.",
+                },
                 {
                     "type": "image_url",
                     "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
@@ -51,12 +59,16 @@ async def test_gemma_vision_capabilities(llm_client: OpenAI) -> None:
 
     response = llm_client.chat.completions.create(
         model=MODEL_NAME,
-        messages=messages,
+        messages=cast(Any, messages),
         max_tokens=20,
     )
 
-    content = response.choices[0].message.content.lower().strip()
-    print(f"\nModel output: {content}")
+    content = response.choices[0].message.content
+    assert content is not None
+    normalized = content.lower().strip()
+    print(f"\nModel output: {normalized}")
 
-    assert content, "Model returned empty response"
-    assert "cat" in content or "feline" in content, f"Model failed to identify a cat. Got: {content}"
+    assert normalized, "Model returned empty response"
+    assert "cat" in normalized or "feline" in normalized, (
+        f"Model failed to identify a cat. Got: {normalized}"
+    )

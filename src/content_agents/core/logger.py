@@ -1,9 +1,10 @@
 import logging
 import sys
+from typing import Any, cast
 
 import structlog
 
-from src.content_agents.core.config import settings
+from content_agents.core.config import settings
 
 
 def configure_logger() -> None:
@@ -22,7 +23,10 @@ def configure_logger() -> None:
         processors.append(structlog.processors.JSONRenderer())
 
     structlog.configure(
-        processors=processors,
+        processors=cast(
+            "list[Any]",
+            processors,
+        ),
         wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(),

@@ -1,7 +1,8 @@
 import tweepy
 
-from src.content_agents.core.config import settings
-from src.content_agents.core.logger import logger
+from content_agents.core.config import settings
+from content_agents.core.logger import logger
+from content_agents.schemas.data_types import PublishResult
 
 
 class TwitterClient:
@@ -20,7 +21,10 @@ class TwitterClient:
         If credentials are valid, initializes the tweepy Client.
         """
         if not (
-            settings.twitter_api_key and settings.twitter_api_secret and settings.twitter_access_token and settings.twitter_access_secret
+            settings.twitter_api_key
+            and settings.twitter_api_secret
+            and settings.twitter_access_token
+            and settings.twitter_access_secret
         ):
             logger.warning("Twitter credentials missing. Client remains inactive.")
             return
@@ -38,7 +42,9 @@ class TwitterClient:
             logger.error("Failed to authenticate with Twitter", error=str(e))
             self.client = None
 
-    def post_tweet(self, text: str, media_urls: list[str] | None = None) -> str | None:
+    def post_tweet(
+        self, text: str, media_urls: list[str] | None = None
+    ) -> PublishResult:
         """
         Post a tweet.
 
@@ -47,12 +53,12 @@ class TwitterClient:
             media_urls: List of image URLs.
 
         Returns:
-            str: Tweet ID if successful, None otherwise.
+            PublishResult with mode, tweet_id, and success flag.
 
         """
         if not self.client:
             logger.info("MOCK PUBLISH: Credentials missing.", text_snippet=text[:50])
-            return "mock-id-no-creds"
+            return PublishResult(mode="mock", tweet_id=None, success=True)
 
         try:
             if media_urls:
@@ -62,18 +68,15 @@ class TwitterClient:
                     urls=media_urls,
                 )
 
-            # Note: For the Free Tier, we focus on text-only posts.
-            # The agent includes links in the text, so X will generate a preview card automatically.
-
             response = self.client.create_tweet(text=text)
-            tweet_id = response.data["id"]
+            tweet_id = str(response.data["id"])
 
             logger.info("Tweet published successfully", tweet_id=tweet_id)
-            return tweet_id
+            return PublishResult(mode="live", tweet_id=tweet_id, success=True)
 
         except Exception as e:
             logger.error("Failed to publish tweet", error=str(e))
-            return None
+            return PublishResult(mode="live", tweet_id=None, success=False)
 
 
 # Singleton instance

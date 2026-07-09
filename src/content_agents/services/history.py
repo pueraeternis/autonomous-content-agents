@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from src.content_agents.core.logger import logger
+from content_agents.core.logger import logger
 
 HISTORY_FILE = Path("data/history.json")
 

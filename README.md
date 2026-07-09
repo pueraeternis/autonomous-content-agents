@@ -90,14 +90,17 @@ For local development without Dockerizing the agent logic:
 # Install dependencies with uv
 uv sync
 
-# Run unit tests
-uv run pytest tests/unit
+# Verify repository health (matches CI)
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy src tests
+uv run pytest
 
-# Run integration tests (requires vLLM running)
-uv run pytest tests/integration
+# Run integration tests manually (requires vLLM and/or internet)
+uv run pytest -m integration
 
 # Run the agent manually once
-uv run python -m src.content_agents.main
+uv run python -m content_agents.main
 ```
 
 ---

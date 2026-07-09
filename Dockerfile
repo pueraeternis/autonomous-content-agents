@@ -33,4 +33,4 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 # Run the application in daemon loop mode
 # Interval can be overridden via ENV or docker-compose command
-CMD ["python", "-m", "src.content_agents.main", "--loop", "--interval", "3600"]
+CMD ["python", "-m", "content_agents.main", "--loop", "--interval", "3600"]

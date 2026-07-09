@@ -1,41 +1,50 @@
 import argparse
 import time
+from typing import Any, cast
 
-from src.content_agents.core.logger import logger
-from src.content_agents.graph.workflow import app
+from langgraph.errors import GraphRecursionError
+
+from content_agents.core.logger import logger
+from content_agents.graph.state import create_initial_state
+from content_agents.graph.workflow import app
 
 
 def run_once() -> None:
     """Single execution of the agent workflow."""
-    logger.info("🚀 Starting Autonomous Session")
+    logger.info("Starting Autonomous Session")
 
-    initial_state = {
-        "topic": "",
-        "articles": [],
-        "draft": None,
-        "critique_history": [],
-        "iteration_count": 0,
-        "final_tweet_id": None,
-        "tried_rubrics": [],
-        "selected_article": None,
-    }
+    initial_state = create_initial_state()
 
     try:
-        final_state = app.invoke(initial_state)
+        final_state = app.invoke(cast(Any, initial_state))
 
-        if final_state.get("final_tweet_id"):
-            logger.info("✅ Session finished. Tweet published.", id=final_state["final_tweet_id"])
+        publish_mode = final_state.get("publish_mode")
+        if publish_mode == "live" and final_state.get("final_tweet_id"):
+            logger.info(
+                "Session finished. Tweet published.",
+                id=final_state["final_tweet_id"],
+            )
+        elif publish_mode == "mock":
+            logger.info("Session finished. Mock publish completed.")
         else:
-            logger.warning("⚠️ Session finished but nothing was published.")
+            reason = final_state.get("termination_reason", "unknown")
+            logger.warning("Session finished but nothing was published.", reason=reason)
 
+    except GraphRecursionError:
+        logger.exception("Workflow exceeded recursion limit")
     except Exception as e:
-        logger.exception("🔥 Critical error in agent loop", error=str(e))
+        logger.exception("Critical error in agent loop", error=str(e))
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Autonomous Content Agents")
     parser.add_argument("--loop", action="store_true", help="Run in continuous loop")
-    parser.add_argument("--interval", type=int, default=3600, help="Interval in seconds (default: 1 hour)")
+    parser.add_argument(
+        "--interval",
+        type=int,
+        default=3600,
+        help="Interval in seconds (default: 1 hour)",
+    )
 
     args = parser.parse_args()
 

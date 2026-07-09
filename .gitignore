@@ -29,6 +29,7 @@ env/
 .cache/
 .mypy_cache/
 .pytest_cache/
+.ruff_cache/
 
 # Local configs
 *.log

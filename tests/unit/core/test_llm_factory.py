@@ -1,7 +1,10 @@
-from src.content_agents.core.config import settings
-from src.content_agents.core.llm import get_llm
+import pytest
+
+from content_agents.core.config import settings
+from content_agents.core.llm import get_llm
 
 
+@pytest.mark.unit
 def test_llm_factory_configuration() -> None:
     """
     Unit test to ensure the LLM factory picks up settings correctly.
@@ -12,14 +15,17 @@ def test_llm_factory_configuration() -> None:
     assert llm.openai_api_base == settings.openai_api_base
 
     llm_key = llm.openai_api_key
-    if hasattr(llm_key, "get_secret_value"):
-        llm_key = llm_key.get_secret_value()
+    if llm_key is not None and hasattr(llm_key, "get_secret_value"):
+        secret_value = llm_key.get_secret_value()
+    else:
+        secret_value = str(llm_key)
 
-    assert llm_key == settings.openai_api_key.get_secret_value()
+    assert secret_value == settings.openai_api_key.get_secret_value()
 
     assert llm.temperature == 0.7  # noqa: PLR2004
 
 
+@pytest.mark.unit
 def test_llm_factory_override() -> None:
     """Test that we can override default parameters."""
     custom_temp = 0.1

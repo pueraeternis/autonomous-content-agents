@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -22,8 +24,12 @@ class NewsArticle(BaseModel):
 class TweetDraft(BaseModel):
     """Draft of a tweet (or thread)."""
 
-    content: str = Field(..., description="Tweet text (up to 280 characters or a thread)")
-    media_files: list[str] = Field(default_factory=list, description="Paths to images or base64 strings")
+    content: str = Field(
+        ..., description="Tweet text (up to 280 characters or a thread)"
+    )
+    media_files: list[str] = Field(
+        default_factory=list, description="Paths to images or base64 strings"
+    )
     reasoning: str = Field(..., description="Explanation of the chosen style and tone")
 
 
@@ -32,4 +38,14 @@ class Critique(BaseModel):
 
     score: int = Field(..., ge=1, le=10, description="Rating from 1 to 10")
     feedback: str = Field(..., description="What to improve")
-    is_approved: bool = Field(..., description="Is the content allowed to be published?")
+    is_approved: bool = Field(
+        ..., description="Is the content allowed to be published?"
+    )
+
+
+class PublishResult(BaseModel):
+    """Outcome of a publish attempt."""
+
+    mode: Literal["live", "mock"]
+    tweet_id: str | None = None
+    success: bool
