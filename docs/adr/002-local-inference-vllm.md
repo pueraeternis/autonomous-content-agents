@@ -1,22 +1,29 @@
 # ADR 002: Local Inference via vLLM
 
 ## Status
+
 Accepted
 
 ## Context
-The system requires a high-performance LLM. We considered:
-1.  **SaaS APIs (OpenAI/Anthropic):** Easy to start, but high latency and recurring costs per token. Privacy concerns with data.
-2.  **Local Inference (HuggingFace Transformers):** Slow, not optimized for production throughput.
-3.  **vLLM:** Optimized serving engine with PagedAttention.
+
+The system requires a high-performance LLM for three agent nodes (Editor, Writer, Critic). We considered:
+
+1. **SaaS APIs (OpenAI/Anthropic):** Easy to start, but recurring per-token costs, latency, and privacy concerns with article content.
+2. **Local Inference (HuggingFace Transformers):** Flexible, but not optimized for production throughput.
+3. **vLLM:** Optimized serving engine with PagedAttention and OpenAI-compatible API.
 
 ## Decision
-We chose **vLLM** hosting **Google Gemma 3 27B**.
+
+We chose **vLLM** hosting **Google Gemma 3 27B**, accessed via LangChain's `ChatOpenAI` client pointed at vLLM's `/v1` endpoint.
 
 ## Consequences
-*   **Positive:**
-    *   **Privacy:** No data leaves our infrastructure.
-    *   **Throughput:** vLLM provides state-of-the-art token generation speed on NVIDIA GPUs.
-    *   **Cost:** Fixed infrastructure cost (GPU rental) vs variable API costs. Useful for high-volume processing.
-*   **Negative:**
-    *   Requires significant hardware (A100/H100 GPU) to run 27B models efficiently.
-    *   Maintenance overhead of managing the Docker container.
+
+- **Positive:**
+  - **Privacy:** article content and drafts never leave the deployment infrastructure.
+  - **Throughput:** vLLM provides efficient token generation on NVIDIA GPUs.
+  - **Cost:** fixed infrastructure cost (GPU) vs variable per-token API billing.
+  - **Compatibility:** OpenAI-compatible API allows swapping the LangChain client without code changes.
+- **Negative:**
+  - Requires significant hardware (~60GB VRAM for 27B bf16).
+  - Docker container maintenance for the vLLM service.
+  - Model upgrades require image restarts and HF cache management.

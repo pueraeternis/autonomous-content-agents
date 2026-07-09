@@ -1,7 +1,7 @@
 [project]
 name = "autonomous-content-agents"
 version = "0.1.0"
-description = "Autonomous multi-agent system for content generation and publishing on X (Twitter)."
+description = "LangGraph multi-agent workflow for content generation with local LLM inference."
 authors = [{ name = "Vitaliy Babchuk", email = "babchuk.vit@gmail.com" }]
 requires-python = ">=3.12"
 readme = "README.md"
